@@ -7,7 +7,7 @@ description: Create and manage @northreliability Instagram reels from Fazel's id
 
 Use when Fazel pastes an idea for a reel, asks for a new @northreliability reel, or says to run the reel workflow. Instagram only; never mix in LinkedIn content. v5 replaces the v4 skill `northreliability-reel-workflow`. If the project brief, the approval board or Fazel's latest message disagrees with this skill, they win.
 
-All fixed standards (palette, type, layout, voice, timing, music, caption, names) are in `brand-kit.md`. Do not change them per reel. Account-specific IDs (approval board URL, Drive folder IDs, Instagram account) are in the project's `pipeline/RUNBOOK.md` and brief, not in this public skill.
+All fixed standards (palette, type, layout, voice, timing, music, caption, names) are in `brand-kit.md`: in the project at `pipeline/reel-brand-kit.md`, and in the GitHub repo `fazelemami1/northreliability-reel-agent`. Read it before Gate 1. Do not change the standards per reel. The scripts' permanent copies are in the Drive `_pipeline` folder (build_reel.py, make_music.py); the example spec is in the repo under `examples/`. Account-specific IDs (approval board URL, Drive folder IDs, Instagram account) are in the project's `pipeline/RUNBOOK.md` and brief, not in this public skill.
 
 ## The flow
 
