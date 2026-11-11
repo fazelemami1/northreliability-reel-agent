@@ -1,0 +1,132 @@
+{
+  "post": 18,
+  "name": "NR_2026-11-13_REEL_Pitfall_Obsolete-asset-policy_v1",
+  "series": "Plant Floor Pitfall",
+  "tag": "ALL",
+  "slides": [
+    {
+      "kind": "footage",
+      "clips": [
+        {
+          "id": "17675",
+          "ss": 2.0,
+          "share": 0.45
+        },
+        {
+          "id": "14785",
+          "ss": 6.0,
+          "cx": 0.46,
+          "share": 0.55
+        }
+      ],
+      "pill": "Plant Floor Pitfall",
+      "headline": "Your filler still runs.",
+      "hl": [
+        "still",
+        "runs."
+      ],
+      "body": "If its controller fails tomorrow, can you still buy one?",
+      "voice": "Your filler still runs. But if its controller fails tomorrow, can you still buy one?"
+    },
+    {
+      "kind": "footage",
+      "clips": [
+        {
+          "id": "4730",
+          "ss": 0.5,
+          "share": 0.5
+        },
+        {
+          "id": "4750",
+          "ss": 0.3,
+          "share": 0.5
+        }
+      ],
+      "headline": "Obsolete assets fail silently.",
+      "hl": [
+        "fail",
+        "silently."
+      ],
+      "body": "The machine runs fine, so nobody looks. Until the part is needed and can't be bought.",
+      "voice": "That's the trap with obsolete assets. The machine runs fine, so nobody looks. Until the day the part is needed, and it can't be bought."
+    },
+    {
+      "kind": "footage",
+      "clips": [
+        {
+          "id": "33006",
+          "ss": 0.5,
+          "cx": 0.66
+        }
+      ],
+      "headline": "In a GMP plant, replacing is slow.",
+      "hl": [
+        "replacing",
+        "is",
+        "slow."
+      ],
+      "body": "Change control. Qualification. QA release. Often a wait for a planned shutdown.",
+      "voice": "In a GMP plant, the fix is slow. A replacement needs change control, qualification and QA release before the line runs again."
+    },
+    {
+      "kind": "footage",
+      "clips": [
+        {
+          "id": "23010",
+          "ss": 1.0,
+          "cx": 0.5
+        }
+      ],
+      "headline": "Make it a policy, not a surprise.",
+      "hl": [
+        "policy,"
+      ],
+      "body": "A yearly watchlist for critical assets: maker support, spares on hand, lead times, software support dates.",
+      "voice": "So make it a policy, not a surprise. Keep a watchlist for your critical assets: maker support, spares on the shelf, lead times and software support dates. Review it every year."
+    },
+    {
+      "kind": "rows",
+      "headline": "Time left\n− time needed",
+      "hl": [
+        "left",
+        "needed"
+      ],
+      "note": "Time left: until spares or support run out.",
+      "rows": [
+        [
+          "red",
+          "UNDER 6 MONTHS",
+          "Start now"
+        ],
+        [
+          "amber",
+          "6 TO 18 MONTHS",
+          "Budget it"
+        ],
+        [
+          "green",
+          "OVER 18 MONTHS",
+          "Review next year"
+        ]
+      ],
+      "voice": "Then run one check. Time left before spares or support run out, minus the time needed to replace. Under six months, start now. Six to eighteen, budget it."
+    },
+    {
+      "kind": "cta",
+      "headline": "Comment",
+      "keyword": "POLICY",
+      "body": "Get the 1-page decision framework for obsolete assets.",
+      "body_hl": [
+        "1-page",
+        "decision",
+        "framework"
+      ],
+      "voice": "Comment POLICY and I'll send you the one-page decision framework."
+    },
+    {
+      "kind": "end",
+      "line": "Find it before it fails.",
+      "voice": "Find it before it fails."
+    }
+  ]
+}

@@ -1,0 +1,1321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NorthReliability Safety Reel Studio</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: dark;
+      --nr-navy: #0F2547;
+      --nr-navy-dark: #081529;
+      --nr-navy-card: #16325C;
+      --nr-gold: #F5B700;
+      --nr-red: #EF4444;
+      --nr-green: #10B981;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #060D1A;
+      color: #F8FAFC;
+      overflow-x: hidden;
+    }
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    /* Strict 9:16 Vertical Container */
+    .reel-viewport {
+      width: 380px;
+      height: 675px;
+      background: radial-gradient(circle at 50% 15%, #173768 0%, #0F2547 60%, #09172E 100%);
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(245, 183, 0, 0.25);
+      border-radius: 20px;
+      user-select: none;
+    }
+    /* Subtle Blueprint Grid Overlay */
+    .blueprint-grid {
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+    .reel-frame {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      transform: translateY(10px) scale(0.99);
+      transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 26px 20px 20px 20px;
+    }
+    .reel-frame.active {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+      z-index: 10;
+    }
+    /* Pulse animations for hazardous stored energy */
+    @keyframes hazardPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55); }
+      50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+    }
+    .hazard-pulse {
+      animation: hazardPulse 2s infinite;
+    }
+    /* Clean Record Mode Fullscreen Overrides */
+    body.clean-record-mode .studio-chrome {
+      display: none !important;
+    }
+    body.clean-record-mode {
+      background-color: #000000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 0;
+      margin: 0;
+    }
+    body.clean-record-mode .reel-viewport {
+      width: 432px;
+      height: 768px;
+      border-radius: 0;
+      box-shadow: none;
+    }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-6">
+
+  <!-- Exit Clean Record Mode Floating Button -->
+  <button id="exitRecordBtn" onclick="exitCleanRecordMode()" class="hidden fixed top-4 right-4 z-50 bg-slate-900/90 hover:bg-red-600 text-white text-xs font-bold px-3.5 py-2 rounded-lg border border-slate-700 shadow-lg transition">
+    ✕ Exit Clean Record Mode (ESC)
+  </button>
+
+  <!-- 3-2-1 Countdown Overlay -->
+  <div id="countdownOverlay" class="hidden fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex flex-col items-center justify-center">
+    <div class="text-amber-400 text-xs font-bold tracking-widest uppercase mb-2">Screen Recording Starting In</div>
+    <div id="countdownNumber" class="text-white font-black text-8xl mono">3</div>
+    <div class="text-slate-400 text-xs mt-4">Audio warmed up • Slides follow the voice</div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toastBox" class="fixed bottom-5 right-5 z-50 hidden bg-emerald-600 text-white px-4 py-3 rounded-xl shadow-2xl border border-emerald-400 text-xs font-bold flex items-center gap-2">
+    <span id="toastText">Copied to clipboard!</span>
+  </div>
+
+  <!-- TOP STUDIO HEADER -->
+  <header class="studio-chrome max-w-6xl mx-auto mb-6 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 bg-slate-900/90 border border-slate-800 p-4 rounded-2xl shadow-xl">
+    <div class="flex items-center gap-3">
+      <div class="w-11 h-11 rounded-xl bg-[#0F2547] border-2 border-[#F5B700] flex items-center justify-center font-black text-[#F5B700] text-lg shadow-inner">
+        NR
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">First Draft • Safety Reel</span>
+          <span class="text-xs text-slate-400 mono">~60s · 4 slides · voice-synced</span>
+        </div>
+        <h1 class="text-lg md:text-xl font-extrabold text-white tracking-tight mt-0.5">
+          Maintenance Safety: LOTO, PPE &amp; SDS (Canadian HSE Rules)
+        </h1>
+      </div>
+    </div>
+
+    <!-- Primary Studio Controls -->
+    <div class="flex flex-wrap items-center gap-2.5 w-full lg:w-auto">
+      <button id="playPauseBtn" onclick="togglePlay()" class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 bg-[#F5B700] hover:bg-amber-400 text-slate-950 font-extrabold text-xs px-4 py-2.5 rounded-xl shadow-lg transition">
+        <span id="playIcon">▶</span>
+        <span id="playLabel">Play Reel + Voice</span>
+      </button>
+
+      <button onclick="resetReel()" class="inline-flex items-center justify-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs px-3.5 py-2.5 rounded-xl border border-slate-700 transition">
+        ↺ Reset
+      </button>
+
+      <button onclick="startCleanRecordMode()" class="inline-flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl shadow-lg transition">
+        🎥 Clean 9:16 Record (3-2-1)
+      </button>
+
+      <button onclick="exportAllSlidesPNG()" class="inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl shadow-lg transition">
+        ⬇ Download 4 HD Slides (PNG)
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN WORKSPACE: LEFT/CENTER REEL VIEWPORT + RIGHT SCRIPT & TIMING VERIFIER -->
+  <main class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+    <!-- LEFT COLUMN: 9:16 VERTICAL REEL PLAYER -->
+    <div class="lg:col-span-5 flex flex-col items-center">
+      <div id="reelViewport" class="reel-viewport blueprint-grid">
+
+        <!-- TOP SEGMENTED TIMELINE BARS (4 x 15s) -->
+        <div class="absolute top-2.5 left-3 right-3 z-30 flex gap-1.5">
+          <div class="flex-1 h-1 bg-white/20 rounded-full overflow-hidden">
+            <div id="prog-0" class="h-full bg-[#F5B700] w-0"></div>
+          </div>
+          <div class="flex-1 h-1 bg-white/20 rounded-full overflow-hidden">
+            <div id="prog-1" class="h-full bg-[#F5B700] w-0"></div>
+          </div>
+          <div class="flex-1 h-1 bg-white/20 rounded-full overflow-hidden">
+            <div id="prog-2" class="h-full bg-[#F5B700] w-0"></div>
+          </div>
+          <div class="flex-1 h-1 bg-white/20 rounded-full overflow-hidden">
+            <div id="prog-3" class="h-full bg-[#F5B700] w-0"></div>
+          </div>
+        </div>
+
+        <!-- ========================================================= -->
+        <!-- FRAME 1 (0:00 - 0:15): PADLOCK != ZERO ENERGY DIAGRAM      -->
+        <!-- ========================================================= -->
+        <section id="frame-0" class="reel-frame active">
+          <!-- Top Brand Tag -->
+          <div class="pt-1">
+            <div class="inline-flex items-center gap-1.5 bg-[#F5B700] text-slate-950 font-black text-[10px] tracking-wider uppercase px-2.5 py-1 rounded-md shadow">
+              <span>AUTO · OEM · PHARMA · FOOD</span>
+              <span class="opacity-40">|</span>
+              <span>60-SECOND CHECK</span>
+            </div>
+            <h2 class="text-white font-black text-[21px] leading-tight mt-2.5 tracking-tight">
+              A PADLOCK ON THE BREAKER <span class="text-[#F5B700]">≠ ZERO ENERGY.</span>
+            </h2>
+            <p class="text-slate-300 text-[11px] font-medium mt-0.5">
+              Why technicians get hurt <span class="text-white font-bold underline decoration-red-500">after</span> the main switch is locked OFF:
+            </p>
+          </div>
+
+          <!-- Center Engineering Diagram: Isolated Breaker vs 3 Live Stored Energies -->
+          <div class="my-auto space-y-2.5">
+            <!-- Top Box: Electrical Breaker Locked OFF -->
+            <div class="bg-slate-900/90 border border-emerald-500/50 rounded-xl p-2.5 flex items-center justify-between">
+              <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-lg bg-emerald-500/20 border border-emerald-400 flex items-center justify-center text-emerald-400 font-black text-sm">
+                  🔒
+                </div>
+                <div>
+                  <div class="text-[10px] uppercase tracking-wider text-emerald-400 font-bold">Main Disconnect (480V)</div>
+                  <div class="text-xs font-extrabold text-white">PADLOCKED &amp; TAGGED OFF</div>
+                </div>
+              </div>
+              <div class="text-right mono">
+                <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-bold text-xs">0 V</span>
+              </div>
+            </div>
+
+            <!-- Connector Arrow Down -->
+            <div class="flex items-center justify-center gap-2 text-[10px] font-extrabold uppercase tracking-wider text-red-400">
+              <span>▼</span>
+              <span>3 Trapped Hazards Still Live Downstream</span>
+              <span>▼</span>
+            </div>
+
+            <!-- 3 Stored Energy Hazard Cards -->
+            <div class="grid grid-cols-1 gap-2">
+              <!-- Hazard 1: Hydraulic Accumulator -->
+              <div class="bg-red-950/55 border border-red-500/70 rounded-xl p-2.5 flex items-center justify-between hazard-pulse">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-8 h-8 rounded-lg bg-red-500/20 border border-red-400 flex items-center justify-center text-sm">
+                    💥
+                  </div>
+                  <div>
+                    <div class="text-xs font-extrabold text-white">Hydraulic Accumulator</div>
+                    <div class="text-[10px] text-red-200">Trapped Oil &amp; Pneumatic Air</div>
+                  </div>
+                </div>
+                <div class="text-right mono">
+                  <div class="text-xs font-black text-red-400 bg-red-950 px-2 py-0.5 rounded border border-red-500/40">180 BAR</div>
+                  <div class="text-[9px] text-red-300 mt-0.5">UNBLED</div>
+                </div>
+              </div>
+
+              <!-- Hazard 2: Gravity / Raised Ram -->
+              <div class="bg-red-950/55 border border-red-500/70 rounded-xl p-2.5 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-8 h-8 rounded-lg bg-red-500/20 border border-red-400 flex items-center justify-center text-sm">
+                    ⚙️
+                  </div>
+                  <div>
+                    <div class="text-xs font-extrabold text-white">Raised Press Ram / Lift</div>
+                    <div class="text-[10px] text-red-200">Mechanical Potential Energy</div>
+                  </div>
+                </div>
+                <div class="text-right mono">
+                  <div class="text-xs font-black text-amber-300 bg-red-950 px-2 py-0.5 rounded border border-amber-400/40">2,400 KG</div>
+                  <div class="text-[9px] text-red-300 mt-0.5">UNPINNED</div>
+                </div>
+              </div>
+
+              <!-- Hazard 3: Process / CIP Line -->
+              <div class="bg-red-950/55 border border-red-500/70 rounded-xl p-2.5 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-8 h-8 rounded-lg bg-red-500/20 border border-red-400 flex items-center justify-center text-sm">
+                    🧪
+                  </div>
+                  <div>
+                    <div class="text-xs font-extrabold text-white">CIP / Caustic / Steam Line</div>
+                    <div class="text-[10px] text-red-200">Residual Chemical &amp; Thermal</div>
+                  </div>
+                </div>
+                <div class="text-right mono">
+                  <div class="text-xs font-black text-red-400 bg-red-950 px-2 py-0.5 rounded border border-red-500/40">85°C · 4 BAR</div>
+                  <div class="text-[9px] text-red-300 mt-0.5">UNDRAINED</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer Bar -->
+          <div class="pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
+            <div class="flex items-center gap-1.5 font-bold text-slate-200">
+              <span class="w-4 h-4 rounded-full bg-[#F5B700] text-slate-950 flex items-center justify-center font-black text-[9px]">NR</span>
+              <span>@northreliability</span>
+            </div>
+            <span class="text-[#F5B700] font-extrabold mono">1 / 4</span>
+          </div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- FRAME 2 (0:15 - 0:30): CANADIAN HSE COMPLIANCE MATRIX      -->
+        <!-- ========================================================= -->
+        <section id="frame-1" class="reel-frame">
+          <div class="pt-1">
+            <div class="inline-flex items-center gap-1.5 bg-[#F5B700] text-slate-950 font-black text-[10px] tracking-wider uppercase px-2.5 py-1 rounded-md shadow">
+              <span>CANADIAN HSE · CSA Z460 &amp; WHMIS 2015</span>
+            </div>
+            <h2 class="text-white font-black text-[20px] leading-tight mt-2.5 tracking-tight">
+              3 COMPLIANCE RULES EVERY <span class="text-[#F5B700]">WORK ORDER</span> MUST ENFORCE
+            </h2>
+          </div>
+
+          <!-- 3-Card Canadian HSE Compliance Matrix -->
+          <div class="my-auto space-y-2.5">
+            <!-- Card 1: LOTO CSA Z460 -->
+            <div class="bg-[#16325C]/90 border-l-4 border-[#F5B700] rounded-r-xl p-3 shadow-md">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-black uppercase tracking-wider text-[#F5B700] mono">1. LOTO · CSA Z460 &amp; ONT. REG. 851 s.42</span>
+                <span class="text-xs font-extrabold bg-slate-900/90 text-white px-2 py-0.5 rounded mono">0 ENERGY</span>
+              </div>
+              <div class="text-sm font-extrabold text-white mt-1">
+                1 Lock = 1 Person = 1 Key
+              </div>
+              <div class="grid grid-cols-2 gap-1.5 mt-2 text-[10px] mono">
+                <div class="bg-slate-900/70 px-2 py-1 rounded text-red-300 border border-red-500/30">✕ E-Stop ≠ Lockout</div>
+                <div class="bg-slate-900/70 px-2 py-1 rounded text-emerald-300 border border-emerald-500/30">✓ Mandatory Try-Start</div>
+              </div>
+            </div>
+
+            <!-- Card 2: SDS WHMIS 2015 -->
+            <div class="bg-[#16325C]/90 border-l-4 border-sky-400 rounded-r-xl p-3 shadow-md">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-black uppercase tracking-wider text-sky-300 mono">2. SDS (FORMERLY MSDS) · WHMIS 2015</span>
+                <span class="text-xs font-extrabold bg-sky-950 text-sky-300 px-2 py-0.5 rounded border border-sky-500/30 mono">SECTION 8</span>
+              </div>
+              <div class="text-sm font-extrabold text-white mt-1">
+                Verify Exposure Controls Before Line Break
+              </div>
+              <div class="text-[11px] text-slate-300 mt-1">
+                Check <span class="text-white font-bold">SDS Section 8</span> before opening CIP, acid/caustic, glycol, or solvent piping.
+              </div>
+            </div>
+
+            <!-- Card 3: Task-Specific PPE -->
+            <div class="bg-[#16325C]/90 border-l-4 border-emerald-400 rounded-r-xl p-3 shadow-md">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-black uppercase tracking-wider text-emerald-300 mono">3. TASK PPE · CSA Z462 &amp; CSA Z94.3</span>
+                <span class="text-xs font-extrabold bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/30 mono">ARC &amp; CHEM</span>
+              </div>
+              <div class="text-sm font-extrabold text-white mt-1">
+                Match PPE Rating to the Exact Hazard
+              </div>
+              <div class="grid grid-cols-2 gap-1.5 mt-2 text-[10px] mono">
+                <div class="bg-slate-900/70 px-2 py-1 rounded text-slate-200">⚡ Arc-Flash Category</div>
+                <div class="bg-slate-900/70 px-2 py-1 rounded text-slate-200">🥽 Chemical Splash Shield</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer Bar -->
+          <div class="pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
+            <div class="flex items-center gap-1.5 font-bold text-slate-200">
+              <span class="w-4 h-4 rounded-full bg-[#F5B700] text-slate-950 flex items-center justify-center font-black text-[9px]">NR</span>
+              <span>@northreliability</span>
+            </div>
+            <span class="text-[#F5B700] font-extrabold mono">2 / 4</span>
+          </div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- FRAME 3 (0:30 - 0:45): 4-STEP ZERO-ENERGY PROTOCOL         -->
+        <!-- ========================================================= -->
+        <section id="frame-2" class="reel-frame">
+          <div class="pt-1">
+            <div class="inline-flex items-center gap-1.5 bg-[#F5B700] text-slate-950 font-black text-[10px] tracking-wider uppercase px-2.5 py-1 rounded-md shadow">
+              <span>THE 4-STEP ZERO-ENERGY PROTOCOL</span>
+            </div>
+            <h2 class="text-white font-black text-[20px] leading-tight mt-2.5 tracking-tight">
+              NO PM OR BREAKDOWN SKIPS <span class="text-[#F5B700]">THESE 4 STEPS</span>
+            </h2>
+          </div>
+
+          <!-- 4-Step Engineering Flowchart -->
+          <div class="my-auto space-y-2">
+            <!-- Step 1 -->
+            <div class="bg-slate-900/85 border border-slate-700 rounded-xl p-2.5 flex items-center gap-3">
+              <div class="w-9 h-9 rounded-lg bg-[#F5B700] text-slate-950 font-black text-base flex items-center justify-center shrink-0 mono">
+                01
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-extrabold text-white uppercase">ISOLATE &amp; TAG</span>
+                  <span class="text-[10px] font-bold text-[#F5B700] mono">CSA Z460</span>
+                </div>
+                <div class="text-[11px] text-slate-300">Open physical disconnect &amp; hang personal padlock + tag.</div>
+              </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="bg-slate-900/85 border border-slate-700 rounded-xl p-2.5 flex items-center gap-3">
+              <div class="w-9 h-9 rounded-lg bg-[#F5B700] text-slate-950 font-black text-base flex items-center justify-center shrink-0 mono">
+                02
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-extrabold text-white uppercase">BLEED, VENT &amp; BLOCK</span>
+                  <span class="text-[10px] font-bold text-emerald-400 mono">0 PSI / PINNED</span>
+                </div>
+                <div class="text-[11px] text-slate-300">Dump air/hydraulics to 0 psi, pin raised loads, drain lines.</div>
+              </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="bg-slate-900/85 border border-slate-700 rounded-xl p-2.5 flex items-center gap-3">
+              <div class="w-9 h-9 rounded-lg bg-[#F5B700] text-slate-950 font-black text-base flex items-center justify-center shrink-0 mono">
+                03
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-extrabold text-white uppercase">TRY-START &amp; METER TEST</span>
+                  <span class="text-[10px] font-bold text-sky-400 mono">0V VERIFIED</span>
+                </div>
+                <div class="text-[11px] text-slate-300">Push local/HMI start button + verify 0V with calibrated meter.</div>
+              </div>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="bg-slate-900/85 border border-slate-700 rounded-xl p-2.5 flex items-center gap-3">
+              <div class="w-9 h-9 rounded-lg bg-[#F5B700] text-slate-950 font-black text-base flex items-center justify-center shrink-0 mono">
+                04
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-extrabold text-white uppercase">MATCH PPE TO SDS SEC. 8</span>
+                  <span class="text-[10px] font-bold text-amber-300 mono">WHMIS 2015</span>
+                </div>
+                <div class="text-[11px] text-slate-300">Wear rated arc-flash or chemical shield before first bolt turns.</div>
+              </div>
+            </div>
+
+            <!-- Bottom Rule Banner -->
+            <div class="bg-emerald-950/70 border border-emerald-500/50 rounded-lg py-1.5 px-3 text-center">
+              <span class="text-[11px] font-extrabold text-emerald-300 tracking-wide">
+                TRUE RELIABILITY = EVERY TECHNICIAN GOES HOME WHOLE.
+              </span>
+            </div>
+          </div>
+
+          <!-- Footer Bar -->
+          <div class="pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
+            <div class="flex items-center gap-1.5 font-bold text-slate-200">
+              <span class="w-4 h-4 rounded-full bg-[#F5B700] text-slate-950 flex items-center justify-center font-black text-[9px]">NR</span>
+              <span>@northreliability</span>
+            </div>
+            <span class="text-[#F5B700] font-extrabold mono">3 / 4</span>
+          </div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- FRAME 4 (0:45 - 1:00): NORTHRELIABILITY PITCH & CTA        -->
+        <!-- ========================================================= -->
+        <section id="frame-3" class="reel-frame">
+          <div class="pt-1">
+            <div class="inline-flex items-center gap-1.5 bg-[#F5B700] text-slate-950 font-black text-[10px] tracking-wider uppercase px-2.5 py-1 rounded-md shadow">
+              <span>NORTHRELIABILITY | LEARN • IMPROVE • EXCEL</span>
+            </div>
+            <h2 class="text-white font-black text-[19px] leading-tight mt-2.5 tracking-tight">
+              BUILD AN AUDIT-READY, <span class="text-[#F5B700]">SAFE MAINTENANCE SYSTEM</span>
+            </h2>
+          </div>
+
+          <!-- Center Brand Authority + Lead Magnet Box -->
+          <div class="my-auto space-y-2.5">
+            <!-- 3 Pillars -->
+            <div class="bg-[#16325C]/90 border border-slate-600/70 rounded-xl p-2.5 text-center">
+              <div class="text-[10px] font-bold uppercase tracking-widest text-slate-300">Fazel Emami · 25 Yrs Maintenance Leadership</div>
+              <div class="grid grid-cols-3 gap-1.5 mt-2 text-[10px] font-extrabold text-white">
+                <div class="bg-slate-900/80 py-1.5 px-1 rounded border border-white/10">🏢 Consulting</div>
+                <div class="bg-slate-900/80 py-1.5 px-1 rounded border border-white/10">🎓 Team Training</div>
+                <div class="bg-slate-900/80 py-1.5 px-1 rounded border border-white/10">📘 Handbook</div>
+              </div>
+            </div>
+
+            <!-- High-Contrast Lead Capture CTA Box -->
+            <div class="bg-[#F5B700] text-slate-950 rounded-xl p-3 text-center shadow-xl border-2 border-white">
+              <div class="text-[10px] font-black uppercase tracking-wider opacity-80">Free 1-Page Shop-Floor Reference</div>
+              <div class="text-sm font-black leading-snug mt-0.5">
+                COMMENT <span class="underline decoration-2">"SAFETY"</span> FOR OUR CANADIAN HSE LOTO CHECKLIST
+              </div>
+            </div>
+
+            <!-- 3 Viewer Action Badges -->
+            <div class="space-y-1.5 text-xs">
+              <div class="bg-slate-900/85 border border-slate-700 rounded-lg px-3 py-2 flex items-center gap-2.5">
+                <span class="w-5 h-5 rounded bg-[#F5B700]/20 text-[#F5B700] font-black flex items-center justify-center text-[11px] mono">1</span>
+                <span class="font-semibold text-slate-200">Drop your <span class="text-white font-bold">#1 LOTO rule</span> in the comments 👇</span>
+              </div>
+              <div class="bg-slate-900/85 border border-slate-700 rounded-lg px-3 py-2 flex items-center gap-2.5">
+                <span class="w-5 h-5 rounded bg-[#F5B700]/20 text-[#F5B700] font-black flex items-center justify-center text-[11px] mono">2</span>
+                <span class="font-semibold text-slate-200"><span class="text-white font-bold">Save &amp; share</span> for your next toolbox talk</span>
+              </div>
+              <div class="bg-slate-900/85 border border-slate-700 rounded-lg px-3 py-2 flex items-center gap-2.5">
+                <span class="w-5 h-5 rounded bg-[#F5B700]/20 text-[#F5B700] font-black flex items-center justify-center text-[11px] mono">3</span>
+                <span class="font-semibold text-slate-200"><span class="text-[#F5B700] font-bold">Link in bio:</span> Consulting &amp; Kindle Handbook</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer Bar -->
+          <div class="pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
+            <div class="flex items-center gap-1.5 font-bold text-slate-200">
+              <span class="w-4 h-4 rounded-full bg-[#F5B700] text-slate-950 flex items-center justify-center font-black text-[9px]">NR</span>
+              <span>@northreliability</span>
+            </div>
+            <span class="text-[#F5B700] font-extrabold mono">4 / 4</span>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- Manual Frame Scrubber Buttons Under Player -->
+      <div class="studio-chrome flex items-center gap-2 mt-4">
+        <button onclick="jumpToFrame(0)" id="tab-0" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-[#F5B700] text-slate-950 transition">Frame 1 (0–15s)</button>
+        <button onclick="jumpToFrame(1)" id="tab-1" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition">Frame 2 (15–30s)</button>
+        <button onclick="jumpToFrame(2)" id="tab-2" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition">Frame 3 (30–45s)</button>
+        <button onclick="jumpToFrame(3)" id="tab-3" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition">Frame 4 (45–60s)</button>
+      </div>
+    </div>
+
+    <!-- RIGHT COLUMN: AUDIO TIMING VERIFIER + VOICEOVER EDITOR + PUBLISHING HUB -->
+    <div class="studio-chrome lg:col-span-7 space-y-5">
+
+      <!-- Real-Time Telemetry & Audio Sync Status Card -->
+      <div class="bg-slate-900/95 border border-slate-800 rounded-2xl p-4 shadow-xl">
+        <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-800">
+          <div>
+            <span class="text-[11px] font-bold uppercase tracking-wider text-amber-400">NorthReliability Reel Skill Verifier</span>
+            <h3 class="text-sm font-extrabold text-white">Voice-driven sync · each slide waits for its voice to finish</h3>
+          </div>
+          <div class="flex items-center gap-3 mono text-xs">
+            <span id="statusBadge" class="px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 font-bold border border-slate-700">READY</span>
+            <span id="timerDisplay" class="text-amber-400 font-extrabold text-sm">0.0s / 60.0s</span>
+          </div>
+        </div>
+
+        <!-- Voice Selection & Rate Control -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3 text-xs">
+          <div class="sm:col-span-2">
+            <label class="block text-slate-400 font-semibold mb-1">Narrator Voice (System TTS)</label>
+            <select id="voiceSelect" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-white font-medium focus:outline-none focus:border-amber-400"></select>
+          </div>
+          <div>
+            <label class="block text-slate-400 font-semibold mb-1">Pacing Speed: <span id="rateLabel" class="text-amber-400 mono">1.02x</span></label>
+            <input id="rateSlider" type="range" min="0.90" max="1.15" step="0.02" value="1.02" oninput="document.getElementById('rateLabel').textContent = this.value + 'x'" class="w-full accent-amber-400 mt-1.5" />
+          </div>
+        </div>
+
+        <!-- v2: no-voice warning (old page played silently with no reason given) -->
+        <div id="voiceWarning" class="hidden mt-3 p-3 rounded-xl bg-red-500/10 border border-red-500/40 text-xs text-red-200 leading-relaxed">
+          <b>No speech voices found in this browser.</b> The reel will play with no sound.
+          Use Chrome or Edge on desktop, or Safari on iPhone. On Linux, install a speech engine.
+        </div>
+
+        <!-- v2: sync mode -->
+        <div class="mt-3">
+          <label class="block text-slate-400 font-semibold mb-1 text-xs">Sync Mode</label>
+          <div class="flex gap-2">
+            <button id="modeVoice" onclick="setSyncMode('voice')" class="flex-1 px-3 py-2 rounded-lg text-xs font-extrabold bg-[#F5B700] text-slate-950 transition">🎙 Voice-Synced (recommended)</button>
+            <button id="modeFixed" onclick="setSyncMode('fixed')" class="flex-1 px-3 py-2 rounded-lg text-xs font-extrabold bg-slate-800 text-slate-300 hover:bg-slate-700 transition">⏱ Fixed 60s</button>
+          </div>
+          <p id="modeNote" class="text-[11px] text-slate-500 mt-1.5">Slide changes when its voice finishes. Always in sync; total length varies.</p>
+        </div>
+
+        <!-- v2: measured sync report, filled after each full run -->
+        <div id="syncReport" class="hidden mt-3 p-3 rounded-xl bg-slate-950/90 border border-slate-800"></div>
+
+        <!-- 4-Frame Script & Word Count Verification Boxes -->
+        <div class="space-y-2.5 mt-4">
+          <div class="p-3 rounded-xl bg-slate-950/90 border border-slate-800" id="script-card-0">
+            <div class="flex items-center justify-between text-[11px] font-bold mb-1">
+              <span class="text-amber-400 mono">SLIDE 1 · [0.25s lead-in → speak → 0.35s hold]</span>
+              <span id="wc-0" class="text-emerald-400 mono">…</span>
+            </div>
+            <p class="text-xs text-slate-200 leading-relaxed" id="vo-0">
+              A padlock on the breaker does not mean the machine is dead. Most serious maintenance injuries happen after the switch is off—because trapped hydraulic pressure, raised loads, or hot chemical lines were never bled or blocked.
+            </p>
+          </div>
+
+          <div class="p-3 rounded-xl bg-slate-950/90 border border-slate-800" id="script-card-1">
+            <div class="flex items-center justify-between text-[11px] font-bold mb-1">
+              <span class="text-amber-400 mono">SLIDE 2 · [0.25s lead-in → speak → 0.35s hold]</span>
+              <span id="wc-1" class="text-emerald-400 mono">…</span>
+            </div>
+            <p class="text-xs text-slate-200 leading-relaxed" id="vo-1">
+              Under Canadian standard C S A Z-four-sixty and W H M I S, three rules protect your team: one lock per person with a try-start test, checking Safety Data Sheet Section Eight before breaking lines, and wearing rated P P E.
+            </p>
+          </div>
+
+          <div class="p-3 rounded-xl bg-slate-950/90 border border-slate-800" id="script-card-2">
+            <div class="flex items-center justify-between text-[11px] font-bold mb-1">
+              <span class="text-amber-400 mono">SLIDE 3 · [0.25s lead-in → speak → 0.35s hold]</span>
+              <span id="wc-2" class="text-emerald-400 mono">…</span>
+            </div>
+            <p class="text-xs text-slate-200 leading-relaxed" id="vo-2">
+              True reliability means every technician goes home whole. Before turning a wrench: isolate and hang your personal lock, bleed and pin all stored energy to zero, verify zero voltage with a try-start test, and match your P P E.
+            </p>
+          </div>
+
+          <div class="p-3 rounded-xl bg-slate-950/90 border border-slate-800" id="script-card-3">
+            <div class="flex items-center justify-between text-[11px] font-bold mb-1">
+              <span class="text-amber-400 mono">SLIDE 4 · [0.25s lead-in → speak → 0.35s hold]</span>
+              <span id="wc-3" class="text-emerald-400 mono">…</span>
+            </div>
+            <p class="text-xs text-slate-200 leading-relaxed" id="vo-3">
+              At NorthReliability, we help auto, O E M, pharma, and food plants build safe, audit-ready maintenance systems. Comment SAFETY below for our Canadian L O T O checklist, save this for your next toolbox talk, and check the link in bio.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- READY-TO-PUBLISH CAPTION & "SAFETY" DM REPLY HUB -->
+      <div class="bg-slate-900/95 border border-slate-800 rounded-2xl p-4 shadow-xl space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-400">1-Click Publishing Hub</span>
+            <h3 class="text-sm font-extrabold text-white">Instagram / LinkedIn Caption &amp; Automated "SAFETY" DM Reply</h3>
+          </div>
+        </div>
+
+        <!-- Box 1: Instagram & LinkedIn Caption -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-xs font-bold text-slate-300">1. Ready-to-Paste Instagram &amp; LinkedIn Caption</span>
+            <button onclick="copyElementText('captionText', 'Caption copied to clipboard!')" class="text-xs font-extrabold bg-amber-500 hover:bg-amber-400 text-slate-950 px-3 py-1 rounded-lg transition">
+              📋 Copy Caption
+            </button>
+          </div>
+          <textarea id="captionText" rows="6" readonly class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 font-normal leading-relaxed focus:outline-none">A padlock on the disconnect doesn’t mean the machine is safe to touch. 🔒⚡
+
+In high-speed automotive, OEM, pharmaceutical, and food manufacturing plants, the most dangerous moment isn't when the line is running—it’s during an urgent breakdown when someone assumes "switched off" means ZERO ENERGY.
+
+To comply with Canadian HSE regulations (CSA Z460 Control of Hazardous Energy, Ontario OHSA Reg. 851 s.42, CSA Z462 Workplace Electrical Safety, and WHMIS 2015), every maintenance work order and PM must enforce 4 rules before a guard comes off:
+
+1️⃣ LOTO (CSA Z460): 1 Lock = 1 Person = 1 Key. Never rely on an E-stop or control interlock as an energy-isolating device.
+2️⃣ Bleed & Block Stored Energy: Dump trapped hydraulic/pneumatic pressure to 0 psi, mechanically pin raised rams/conveyors against gravity, and drain hot CIP/steam lines.
+3️⃣ Try-Start & Meter Test: Push local/HMI start and verify 0V with a calibrated meter before touching a bolt.
+4️⃣ Check SDS Section 8 & Task PPE: Under Canadian WHMIS 2015, verify Section 8 (Exposure Controls / Personal Protection) of the Safety Data Sheet and match your arc-flash or chemical PPE to the exact hazard.
+
+No OEE target or batch schedule is worth a shortcut on LOTO.
+
+👇 Comment "SAFETY" below and I will send you our 1-page Canadian HSE Maintenance Pre-Job & LOTO Checklist—or drop your #1 shop-floor LOTO rule in the comments!
+
+🔗 Link in bio for NorthReliability advisory consulting, on-site team training, or the full handbook on Amazon Kindle ($12.99 USD / Free on Kindle Unlimited, ASIN: B0HP6PR69R).
+
+#MaintenanceSafety #LockoutTagout #LOTO #CSAZ460 #HSECanada #OHSA #WHMIS #ReliabilityEngineering #MaintenanceManagement #PlantMaintenance #AutomotiveManufacturing #OEM #PharmaceuticalManufacturing #FoodManufacturing #SAPPM</textarea>
+        </div>
+
+        <!-- Box 2: DM Reply when viewers comment "SAFETY" -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-xs font-bold text-slate-300">2. Direct Message (DM) Reply When Someone Comments "SAFETY"</span>
+            <button onclick="copyElementText('dmReplyText', 'SAFETY DM Checklist Reply copied!')" class="text-xs font-extrabold bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-3 py-1 rounded-lg transition">
+              📋 Copy "SAFETY" DM Reply
+            </button>
+          </div>
+          <textarea id="dmReplyText" rows="5" readonly class="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-200 font-normal leading-relaxed focus:outline-none">Thanks for commenting SAFETY! Here is the NorthReliability 4-Point Canadian HSE Pre-Wrench Verification Checklist (aligned with CSA Z460, Ont. Reg. 851 s.42, CSA Z462 & WHMIS 2015):
+
+✅ 1. ISOLATE & TAG: Identify all energy sources (electrical, pneumatic, hydraulic, gravity, thermal, chemical). Open physical disconnects and apply your personal lock & tag (1 Lock = 1 Person = 1 Key).
+✅ 2. BLEED, VENT & BLOCK: Release trapped hydraulic/air accumulators to 0 psi, install mechanical safety blocks/pins under raised rams or conveyors, and drain/vent process or CIP lines.
+✅ 3. TRY-START & METER VERIFICATION: Attempt a local and HMI start with guards clear, then verify 0V phase-to-phase and phase-to-ground with a calibrated meter tested on a known live source.
+✅ 4. SDS SECTION 8 & TASK PPE: Review WHMIS 2015 SDS Section 8 before breaking any chemical/utility line, and wear task-rated arc-flash (CSA Z462) or chemical splash PPE (CSA Z94.3).
+
+Are you currently updating your plant's PM task lists in SAP PM to embed safety steps, or looking for shop-floor training for your technicians? Happy to share how we structure this at NorthReliability!</textarea>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script>
+    // =========================================================================
+    // NORTHRELIABILITY REEL ENGINE v2 — VOICE-DRIVEN SYNC
+    // Replaces the fixed 15.000s clock, which drifted out of sync with the
+    // voice. Fixes, in order of severity:
+    //   1. Slide 4's call-to-action was cut off mid-sentence at 60.0s.
+    //   2. Voice bled past the slide change (slide 2 ran 0.94s into slide 3).
+    //   3. 1.3s of dead air at the start of every slide (5.2s of 60s).
+    //   4. Blank " " pre-roll utterance: Chrome often fires no onend, and the
+    //      real script was spoken inside that callback, so the slide went
+    //      completely silent. Every wait now has a hard timeout fallback.
+    //   5. Resuming after pause left the slide silent for the rest of it.
+    // =========================================================================
+    const TOTAL_FRAMES = 4;
+    const TARGET_TOTAL = 60.0;    // Instagram target
+    const LEAD_IN_MS = 250;       // slide on screen -> voice starts
+    const TAIL_PAD_MS = 350;      // voice ends -> slide holds -> next slide
+    const FIXED_FRAME = 15.0;     // Fixed-60s mode only
+    const WATCHDOG_MS = 900;      // onstart never fired -> respeak once
+
+    let isPlaying = false;
+    let syncMode = 'voice';       // 'voice' = slide waits for voice | 'fixed' = hard 60s
+    let activeFrameIndex = 0;
+    let elapsedTotal = 0;
+    let runStartedAt = 0;
+    let rafId = null;
+    let stepTimer = null;
+    let availableVoices = [];
+    let warmedUp = false;
+    let spokenThisRun = [];
+    let measured = [null, null, null, null];
+
+    const frameScripts = [
+      document.getElementById('vo-0').innerText.trim(),
+      document.getElementById('vo-1').innerText.trim(),
+      document.getElementById('vo-2').innerText.trim(),
+      document.getElementById('vo-3').innerText.trim()
+    ];
+    const frameWords = frameScripts.map(t => t.split(/\s+/).filter(Boolean).length);
+
+    // Remembered measurements are a per-browser convenience only.
+    try {
+      const saved = JSON.parse(localStorage.getItem('nr_measured_v2') || 'null');
+      if (Array.isArray(saved) && saved.length === TOTAL_FRAMES) measured = saved;
+    } catch (e) {}
+    function saveMeasured() {
+      try { localStorage.setItem('nr_measured_v2', JSON.stringify(measured)); } catch (e) {}
+    }
+
+    function badge(text, tone) {
+      const el = document.getElementById('statusBadge');
+      if (!el) return;
+      const tones = {
+        amber: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+        green: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+        sky: 'bg-sky-500/20 text-sky-300 border-sky-500/40',
+        red: 'bg-red-500/20 text-red-300 border-red-500/40',
+        grey: 'bg-slate-800 text-slate-300 border-slate-700'
+      };
+      el.textContent = text;
+      el.className = `px-2.5 py-1 rounded-md font-bold border ${tones[tone] || tones.grey}`;
+    }
+
+    // ---------------------------------------------------------------- voices
+    function loadVoices() {
+      if (!('speechSynthesis' in window)) return;
+      availableVoices = window.speechSynthesis.getVoices();
+      const select = document.getElementById('voiceSelect');
+      const warn = document.getElementById('voiceWarning');
+
+      if (!availableVoices.length) {
+        if (warn) warn.classList.remove('hidden');   // silent-page cause, now visible
+        return;
+      }
+      if (warn) warn.classList.add('hidden');
+      if (!select) return;
+
+      const prev = select.value;
+      select.innerHTML = '';
+      const english = availableVoices.filter(v => v.lang && v.lang.toLowerCase().startsWith('en'));
+      const list = english.length ? english : availableVoices;
+      list.forEach(voice => {
+        const opt = document.createElement('option');
+        opt.value = voice.name;
+        opt.textContent = `${voice.name} (${voice.lang})`;
+        select.appendChild(opt);
+      });
+      const preferred = list.find(v => /Natural/.test(v.name))
+        || list.find(v => v.name.includes('Google US English'))
+        || list.find(v => /\bGuy\b/.test(v.name))
+        || list.find(v => /\bDavid\b/.test(v.name));
+      if (prev && list.some(v => v.name === prev)) select.value = prev;
+      else if (preferred) select.value = preferred.name;
+    }
+    if ('speechSynthesis' in window) {
+      loadVoices();
+      window.speechSynthesis.onvoiceschanged = loadVoices;
+      setTimeout(loadVoices, 1200);   // some browsers populate late
+    }
+
+    function baseRate() {
+      return parseFloat(document.getElementById('rateSlider')?.value || '1.02');
+    }
+    function applyVoice(utter) {
+      const name = document.getElementById('voiceSelect')?.value;
+      const v = availableVoices.find(x => x.name === name);
+      if (v) utter.voice = v;
+      utter.pitch = 0.98;
+    }
+
+    // One warm-up per session, using a real word. Every wait has a hard
+    // fallback, so a missing onend can never leave a slide silent.
+    function warmUpOnce(done) {
+      if (warmedUp || !('speechSynthesis' in window)) { done(); return; }
+      try {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance('ok');
+        u.volume = 0.01; u.rate = 1.6;
+        applyVoice(u);
+        let fired = false;
+        const finish = () => { if (fired) return; fired = true; warmedUp = true; done(); };
+        u.onend = finish;
+        u.onerror = finish;
+        window.speechSynthesis.speak(u);
+        setTimeout(finish, 700);
+      } catch (e) { warmedUp = true; done(); }
+    }
+
+    // ------------------------------------------------------------- speaking
+    function speakFrame(idx, onDone, isRetry) {
+      if (!('speechSynthesis' in window)) { onDone(); return; }
+
+      const utter = new SpeechSynthesisUtterance(frameScripts[idx]);
+      applyVoice(utter);
+      utter.volume = 1.0;
+
+      // measured[] holds seconds at rate 1.0. Length at rate r = measured / r.
+      // Fixed-60s mode: speed up only as much as needed to fit (never slower
+      // than the chosen pace, never faster than MAX_FIT_RATE).
+      if (syncMode === 'fixed' && measured[idx]) {
+        utter.rate = fixedRate(idx);
+      } else {
+        utter.rate = baseRate();
+      }
+
+      let started = false, finished = false, t0 = 0;
+      const settle = (natural) => {
+        if (finished) return;
+        finished = true;
+        // Only a natural end while playing is a valid measurement. A pause or
+        // cancel would otherwise save a partial length.
+        if (natural && started && isPlaying) {
+          measured[idx] = ((performance.now() - t0) / 1000) * utter.rate;
+          saveMeasured();
+        }
+        onDone();
+      };
+
+      utter.onstart = () => {
+        started = true; t0 = performance.now();
+        badge(`SLIDE ${idx + 1}: SPEAKING`, 'green');
+      };
+      utter.onend = () => settle(true);
+      utter.onerror = () => settle(false);
+
+      window.speechSynthesis.speak(utter);
+
+      // Watchdog: if the engine never starts, try once more, then move on.
+      // Mark this attempt finished BEFORE cancel(): cancel() can fire onend
+      // synchronously, which would otherwise advance the slide twice.
+      setTimeout(() => {
+        if (started || finished || !isPlaying) return;
+        finished = true;
+        window.speechSynthesis.cancel();
+        if (isRetry) { onDone(); return; }
+        speakFrame(idx, onDone, true);
+      }, WATCHDOG_MS);
+    }
+
+    // ------------------------------------------------------------- timeline
+    function expectedFrameSecs(idx) {
+      if (syncMode === 'fixed') return FIXED_FRAME;
+      const atRate1 = measured[idx] ?? (frameWords[idx] / (165 / 60));
+      return (LEAD_IN_MS + TAIL_PAD_MS) / 1000 + atRate1 / baseRate();
+    }
+
+    function updateVisualState(newFrameIdx) {
+      for (let i = 0; i < TOTAL_FRAMES; i++) {
+        const frameEl = document.getElementById(`frame-${i}`);
+        const tabEl = document.getElementById(`tab-${i}`);
+        const cardEl = document.getElementById(`script-card-${i}`);
+        if (i === newFrameIdx) {
+          frameEl?.classList.add('active');
+          if (tabEl) tabEl.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-[#F5B700] text-slate-950 transition';
+          if (cardEl) cardEl.className = 'p-3 rounded-xl bg-slate-900 border-2 border-[#F5B700] shadow-lg';
+        } else {
+          frameEl?.classList.remove('active');
+          if (tabEl) tabEl.className = 'px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-800 text-slate-300 hover:bg-slate-700 transition';
+          if (cardEl) cardEl.className = 'p-3 rounded-xl bg-slate-950/90 border border-slate-800 opacity-75';
+        }
+      }
+    }
+
+    function updateTimelineBars() {
+      let acc = 0;
+      for (let i = 0; i < TOTAL_FRAMES; i++) {
+        const bar = document.getElementById(`prog-${i}`);
+        const span = expectedFrameSecs(i);
+        if (bar) {
+          let pct = 0;
+          if (i < activeFrameIndex) pct = 100;
+          else if (i === activeFrameIndex) pct = Math.min(100, Math.max(0, ((elapsedTotal - acc) / span) * 100));
+          bar.style.width = `${pct}%`;
+        }
+        acc += span;
+      }
+      const t = document.getElementById('timerDisplay');
+      if (t) t.textContent = `${elapsedTotal.toFixed(1)}s / ${acc.toFixed(1)}s`;
+    }
+
+    function animationLoop() {
+      if (!isPlaying) return;
+      elapsedTotal = (performance.now() - runStartedAt) / 1000;
+      updateTimelineBars();
+      rafId = requestAnimationFrame(animationLoop);
+    }
+
+    // ---------------------------------------------------------------- runner
+    function runFrame(idx) {
+      activeFrameIndex = idx;
+      updateVisualState(idx);
+      badge(`SLIDE ${idx + 1}: ON SCREEN`, 'amber');
+
+      const frameOpenedAt = performance.now();
+
+      stepTimer = setTimeout(() => {
+        if (!isPlaying) return;
+        speakFrame(idx, () => {
+          if (!isPlaying) return;
+          spokenThisRun[idx] = measured[idx];
+          badge(`SLIDE ${idx + 1}: VOICE COMPLETE ✓`, 'sky');
+
+          const advance = () => {
+            if (!isPlaying) return;
+            if (idx + 1 < TOTAL_FRAMES) runFrame(idx + 1);
+            else finishRun();
+          };
+
+          if (syncMode === 'fixed') {
+            // Hold the slide until its exact 15s boundary.
+            const boundary = runStartedAt + (idx + 1) * FIXED_FRAME * 1000;
+            stepTimer = setTimeout(advance, Math.max(TAIL_PAD_MS, boundary - performance.now()));
+          } else {
+            // Voice mode: the voice decides when the slide changes.
+            stepTimer = setTimeout(advance, TAIL_PAD_MS);
+          }
+        });
+      }, LEAD_IN_MS);
+    }
+
+    // Play, resume or replay. Resume restarts the current slide from its
+    // beginning, voice included (the old engine left it silent).
+    function startReel() {
+      if (document.getElementById('playLabel').textContent.includes('Replay')) {
+        activeFrameIndex = 0;
+        spokenThisRun = [];
+      }
+      resetRunState(false);
+      let offset = 0;
+      for (let i = 0; i < activeFrameIndex; i++) offset += expectedFrameSecs(i);
+      elapsedTotal = offset;
+      isPlaying = true;
+      document.getElementById('playIcon').textContent = '⏸';
+      document.getElementById('playLabel').textContent = 'Pause Reel';
+      badge('WARMING AUDIO…', 'amber');
+      warmUpOnce(() => {
+        if (!isPlaying) return;
+        runStartedAt = performance.now() - offset * 1000;
+        runFrame(activeFrameIndex);
+        rafId = requestAnimationFrame(animationLoop);
+      });
+    }
+
+    function resetRunState(clearFrame) {
+      if (rafId) cancelAnimationFrame(rafId);
+      if (stepTimer) clearTimeout(stepTimer);
+      rafId = null; stepTimer = null;
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      if (clearFrame) { activeFrameIndex = 0; elapsedTotal = 0; }
+    }
+
+    function togglePlay() {
+      if (isPlaying) pauseReel(false); else startReel();
+    }
+
+    // Pause now restarts the current slide's voice on resume, instead of
+    // leaving the rest of the slide silent.
+    function pauseReel(completed = false) {
+      isPlaying = false;
+      resetRunState(false);
+      document.getElementById('playIcon').textContent = '▶';
+      document.getElementById('playLabel').textContent = completed ? 'Replay Reel' : 'Resume Reel';
+      badge(completed ? `COMPLETED ${elapsedTotal.toFixed(1)}s ✓` : 'PAUSED', 'grey');
+    }
+
+    function resetReel() {
+      isPlaying = false;
+      resetRunState(true);
+      spokenThisRun = [];
+      updateVisualState(0);
+      updateTimelineBars();
+      document.getElementById('playIcon').textContent = '▶';
+      document.getElementById('playLabel').textContent = 'Play Reel + Voice';
+      badge('READY', 'grey');
+    }
+
+    function jumpToFrame(idx) {
+      isPlaying = false;
+      resetRunState(false);
+      activeFrameIndex = idx;
+      let acc = 0;
+      for (let i = 0; i < idx; i++) acc += expectedFrameSecs(i);
+      elapsedTotal = acc;
+      updateVisualState(idx);
+      updateTimelineBars();
+      document.getElementById('playIcon').textContent = '▶';
+      document.getElementById('playLabel').textContent = 'Resume Reel';
+      badge(`SLIDE ${idx + 1} SELECTED`, 'grey');
+    }
+
+    // ------------------------------------------------------- the sync report
+    function finishRun() {
+      isPlaying = false;
+      elapsedTotal = (performance.now() - runStartedAt) / 1000;
+      resetRunState(false);
+      document.getElementById('playIcon').textContent = '▶';
+      document.getElementById('playLabel').textContent = 'Replay Reel';
+      badge(`IN SYNC · ${elapsedTotal.toFixed(1)}s TOTAL`, 'green');
+      renderReport();
+    }
+
+    function renderReport() {
+      const box = document.getElementById('syncReport');
+      if (!box) return;
+      const budget = FIXED_FRAME - (LEAD_IN_MS + TAIL_PAD_MS) / 1000;
+      let total = 0;
+      let rows = '';
+      for (let i = 0; i < TOTAL_FRAMES; i++) {
+        if (measured[i] == null) continue;
+        const spoken = syncMode === 'fixed'
+          ? measured[i] / fixedRate(i)
+          : measured[i] / baseRate();
+        const voiceSlot = spoken + (LEAD_IN_MS + TAIL_PAD_MS) / 1000;
+        // Fixed mode holds every slide to 15.0s unless the voice overruns it.
+        const slideSecs = syncMode === 'fixed' ? Math.max(FIXED_FRAME, voiceSlot) : voiceSlot;
+        total += slideSecs;
+        const over = spoken - budget;
+        const wps = frameWords[i] / spoken;
+        const verdict = over > 0.3
+          ? `<span class="text-amber-300">trim ~${Math.ceil(over * wps)} words</span>`
+          : over < -1.0
+            ? `<span class="text-sky-300">room for ~${Math.floor(-over * wps)} more</span>`
+            : `<span class="text-emerald-300">fits</span>`;
+        rows += `<tr class="border-t border-slate-800">
+          <td class="py-1.5 pr-2 font-bold text-slate-200">Slide ${i + 1}</td>
+          <td class="py-1.5 pr-2 text-slate-400">${frameWords[i]}w</td>
+          <td class="py-1.5 pr-2 font-mono text-slate-200">${spoken.toFixed(1)}s</td>
+          <td class="py-1.5 pr-2 font-mono text-slate-500">${budget.toFixed(1)}s</td>
+          <td class="py-1.5">${verdict}</td></tr>`;
+      }
+      if (!rows) { box.classList.add('hidden'); return; }
+      const delta = total - TARGET_TOTAL;
+      const deltaTxt = Math.abs(delta) < 1.0
+        ? `<span class="text-emerald-300">on target</span>`
+        : delta > 0
+          ? `<span class="text-amber-300">${delta.toFixed(1)}s over 60s</span>`
+          : `<span class="text-sky-300">${Math.abs(delta).toFixed(1)}s under 60s</span>`;
+      box.innerHTML = `
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-extrabold text-slate-200">MEASURED SYNC REPORT (this voice, this rate)</span>
+          <span class="text-xs font-bold">${deltaTxt}</span>
+        </div>
+        <table class="w-full text-xs"><thead><tr class="text-slate-500 text-left">
+          <th class="pb-1 font-bold">Slide</th><th class="pb-1 font-bold">Words</th>
+          <th class="pb-1 font-bold">Spoken</th><th class="pb-1 font-bold">Budget</th>
+          <th class="pb-1 font-bold">Verdict</th></tr></thead><tbody>${rows}</tbody></table>
+        <p class="text-[11px] text-slate-500 mt-2 leading-relaxed">
+          Real measured lengths from the run just played. Budget is the 15.0s slot minus the
+          0.25s lead-in and 0.35s tail. Voice mode stays in sync at any total length;
+          Fixed 60s mode uses these numbers to fit each slide into 15.0s.</p>`;
+      box.classList.remove('hidden');
+      renderCardLabels();
+    }
+
+    function setSyncMode(mode) {
+      syncMode = mode;
+      const a = document.getElementById('modeVoice');
+      const b = document.getElementById('modeFixed');
+      const on = 'flex-1 px-3 py-2 rounded-lg text-xs font-extrabold bg-[#F5B700] text-slate-950 transition';
+      const off = 'flex-1 px-3 py-2 rounded-lg text-xs font-extrabold bg-slate-800 text-slate-300 hover:bg-slate-700 transition';
+      if (a) a.className = mode === 'voice' ? on : off;
+      if (b) b.className = mode === 'fixed' ? on : off;
+      const note = document.getElementById('modeNote');
+      if (note) {
+        note.textContent = mode === 'voice'
+          ? 'Slide changes when its voice finishes. Always in sync; total length varies.'
+          : (measured.some(m => m == null)
+              ? 'Needs one Voice-mode pass first to measure each slide.'
+              : 'Hard 15.0s slides. Long slides are sped up (max 1.20x) so the voice fits.');
+      }
+      resetReel();
+      renderCardLabels();
+      if (measured.some(m => m != null)) renderReport();
+    }
+
+    // Clean 9:16 Screen-Record Mode with 3-2-1 Countdown
+    function startCleanRecordMode() {
+      resetReel();
+      document.body.classList.add('clean-record-mode');
+      document.getElementById('exitRecordBtn').classList.remove('hidden');
+      const overlay = document.getElementById('countdownOverlay');
+      const numEl = document.getElementById('countdownNumber');
+      overlay.classList.remove('hidden');
+      warmUpOnce(() => {});
+      let count = 3;
+      numEl.textContent = count;
+      const interval = setInterval(() => {
+        count--;
+        if (count > 0) { numEl.textContent = count; }
+        else { clearInterval(interval); overlay.classList.add('hidden'); startReel(); }
+      }, 1000);
+    }
+
+    function exitCleanRecordMode() {
+      document.body.classList.remove('clean-record-mode');
+      document.getElementById('exitRecordBtn').classList.add('hidden');
+      document.getElementById('countdownOverlay').classList.add('hidden');
+      pauseReel(false);
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.body.classList.contains('clean-record-mode')) {
+        exitCleanRecordMode();
+      }
+    });
+
+    // Clipboard Copy Helper (iFrame-compatible)
+    function copyElementText(elementId, message) {
+      const textarea = document.getElementById(elementId);
+      if (!textarea) return;
+      const fallback = () => {
+        textarea.select();
+        textarea.setSelectionRange(0, 99999);
+        try { document.execCommand('copy'); showToast(message); }
+        catch (e) { showToast('Text selected. Press Ctrl+C / Cmd+C to copy.'); }
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(textarea.value).then(() => showToast(message), fallback);
+      } else {
+        fallback();
+      }
+    }
+
+    function showToast(msg) {
+      const box = document.getElementById('toastBox');
+      const txt = document.getElementById('toastText');
+      txt.textContent = msg;
+      box.classList.remove('hidden');
+      setTimeout(() => box.classList.add('hidden'), 2600);
+    }
+
+    // Live per-slide labels. The old ones were hardcoded text with a green
+    // tick and wrong word counts (said 37, real 41), so nothing was checked.
+    const MAX_FIT_RATE = 1.20;   // above this the voice sounds rushed
+    function fixedRate(idx) {
+      const budget = FIXED_FRAME - (LEAD_IN_MS + TAIL_PAD_MS) / 1000;
+      const atRate1 = measured[idx] ?? frameWords[idx] / (165 / 60);
+      return Math.min(MAX_FIT_RATE, Math.max(baseRate(), atRate1 / budget));
+    }
+
+    function renderCardLabels() {
+      const budget = FIXED_FRAME - (LEAD_IN_MS + TAIL_PAD_MS) / 1000;
+      for (let i = 0; i < TOTAL_FRAMES; i++) {
+        const el = document.getElementById(`wc-${i}`);
+        if (!el) continue;
+        const isMeasured = measured[i] != null;
+        const atRate1 = measured[i] ?? frameWords[i] / (165 / 60);
+        const tag = isMeasured ? 'measured' : 'estimate';
+        const secs = atRate1 / baseRate();
+        let text, ok;
+        if (syncMode === 'fixed') {
+          const r = fixedRate(i);
+          ok = atRate1 / r <= budget + 0.3;
+          const wps = frameWords[i] / (atRate1 / r);
+          text = !ok
+            ? `⚠ too long even at ${MAX_FIT_RATE}x, trim ~${Math.ceil((atRate1 / r - budget) * wps)} words`
+            : r > baseRate() + 0.005 ? `fits at ${r.toFixed(2)}x ✓` : `fits ✓`;
+        } else {
+          ok = secs <= budget + 0.3;
+          text = ok ? '✓' : '· runs past 15s (still in sync)';
+        }
+        el.textContent = `${frameWords[i]} words · ${secs.toFixed(1)}s ${tag} ${text}`;
+        el.className = `mono ${ok ? 'text-emerald-400' : 'text-amber-300'}`;
+      }
+    }
+    document.getElementById('rateSlider')?.addEventListener('input', () => {
+      renderCardLabels(); updateTimelineBars();
+      if (measured.some(m => m != null)) renderReport();
+    });
+
+    updateTimelineBars();
+    renderCardLabels();
+    if (measured.some(m => m != null)) renderReport();
+
+    // =========================================================================
+    // 1-CLICK 1080x1920 HD PNG SLIDE EXPORTER (4 CANVAS SLIDES)
+    // =========================================================================
+    function exportAllSlidesPNG() {
+      const slidesData = [
+        {
+          filename: 'NorthReliability_Safety_Slide_1_Hook.png',
+          tag: 'AUTO · OEM · PHARMA · FOOD | 60-SECOND CHECK',
+          title1: 'A PADLOCK ON THE BREAKER',
+          title2: '≠ ZERO ENERGY.',
+          subtitle: 'Why technicians get hurt AFTER the main switch is locked OFF:',
+          cards: [
+            { badge: '0 V', title: 'MAIN DISCONNECT (480V)', desc: 'Padlocked & Tagged OFF — Electrical Isolated', color: '#10B981' },
+            { badge: '180 BAR', title: '1. HYDRAULIC ACCUMULATOR', desc: 'Trapped oil & pneumatic pressure still live', color: '#EF4444' },
+            { badge: '2,400 KG', title: '2. RAISED PRESS / LIFT LOAD', desc: 'Unpinned mechanical gravity load ready to drop', color: '#F59E0B' },
+            { badge: '85°C · 4 BAR', title: '3. CIP / CAUSTIC / STEAM LINE', desc: 'Undrained thermal & chemical line pressure', color: '#EF4444' }
+          ],
+          step: '1 / 4'
+        },
+        {
+          filename: 'NorthReliability_Safety_Slide_2_Canadian_HSE.png',
+          tag: 'CANADIAN HSE · CSA Z460 & WHMIS 2015',
+          title1: '3 COMPLIANCE RULES EVERY',
+          title2: 'WORK ORDER MUST ENFORCE',
+          subtitle: 'Mandatory shop-floor standards across Canadian plants:',
+          cards: [
+            { badge: 'CSA Z460', title: '1. LOTO (ONT. REG. 851 s.42)', desc: '1 Lock = 1 Person = 1 Key. E-Stops are NOT lockout.', color: '#F5B700' },
+            { badge: 'SECTION 8', title: '2. SDS (WHMIS 2015)', desc: 'Check Safety Data Sheet Sec. 8 before breaking lines.', color: '#38BDF8' },
+            { badge: 'CSA Z462', title: '3. TASK-RATED PPE (Z94.3)', desc: 'Match Arc-Flash & Chemical shield to exact hazard.', color: '#10B981' }
+          ],
+          step: '2 / 4'
+        },
+        {
+          filename: 'NorthReliability_Safety_Slide_3_Protocol.png',
+          tag: 'THE 4-STEP ZERO-ENERGY PROTOCOL',
+          title1: 'NO PM OR BREAKDOWN SKIPS',
+          title2: 'THESE 4 VERIFICATION STEPS',
+          subtitle: 'True Reliability = Every Technician Goes Home Whole:',
+          cards: [
+            { badge: 'STEP 01', title: 'ISOLATE & HANG PERSONAL LOCK', desc: 'Open physical disconnect + apply personal lock & tag', color: '#F5B700' },
+            { badge: 'STEP 02', title: 'BLEED, VENT & PIN LOADS', desc: 'Dump air/hydraulics to 0 psi, pin gravity loads, drain lines', color: '#10B981' },
+            { badge: 'STEP 03', title: 'TRY-START & METER TEST', desc: 'Push local/HMI start + verify 0V with calibrated meter', color: '#38BDF8' },
+            { badge: 'STEP 04', title: 'MATCH PPE TO SDS SECTION 8', desc: 'Don rated arc-flash or chemical PPE before turning a bolt', color: '#F5B700' }
+          ],
+          step: '3 / 4'
+        },
+        {
+          filename: 'NorthReliability_Safety_Slide_4_CTA.png',
+          tag: 'NORTHRELIABILITY | LEARN • IMPROVE • EXCEL',
+          title1: 'BUILD AN AUDIT-READY,',
+          title2: 'SAFE MAINTENANCE SYSTEM',
+          subtitle: 'Fazel Emami · Consulting · Team Training · Publications',
+          cards: [
+            { badge: 'FREE PDF', title: 'COMMENT "SAFETY" BELOW', desc: 'We will DM you our 1-Page Canadian HSE LOTO Checklist', color: '#F5B700' },
+            { badge: 'ACTION 1', title: 'DROP YOUR #1 LOTO RULE', desc: 'Share the most overlooked stored energy in your plant', color: '#38BDF8' },
+            { badge: 'ACTION 2', title: 'SAVE FOR YOUR TOOLBOX TALK', desc: 'Use this 4-step check in your next maintenance review', color: '#10B981' },
+            { badge: 'ACTION 3', title: 'CHECK THE LINK IN BIO', desc: 'Plant Consulting, Workshops & Amazon Kindle Handbook', color: '#F5B700' }
+          ],
+          step: '4 / 4'
+        }
+      ];
+
+      slidesData.forEach((slide, index) => {
+        setTimeout(() => {
+          const canvas = document.createElement('canvas');
+          canvas.width = 1080;
+          canvas.height = 1920;
+          const ctx = canvas.getContext('2d');
+
+          // Navy Gradient Background
+          const grad = ctx.createRadialGradient(540, 300, 100, 540, 960, 1200);
+          grad.addColorStop(0, '#173768');
+          grad.addColorStop(0.6, '#0F2547');
+          grad.addColorStop(1, '#081529');
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, 1080, 1920);
+
+          // Top Gold Tag Pill
+          ctx.fillStyle = '#F5B700';
+          ctx.fillRect(70, 110, 740, 58);
+          ctx.fillStyle = '#081529';
+          ctx.font = '900 26px Inter, sans-serif';
+          ctx.fillText(slide.tag, 92, 148);
+
+          // Headlines
+          ctx.fillStyle = '#FFFFFF';
+          ctx.font = '900 58px Inter, sans-serif';
+          ctx.fillText(slide.title1, 70, 260);
+          ctx.fillStyle = '#F5B700';
+          ctx.fillText(slide.title2, 70, 335);
+
+          ctx.fillStyle = '#CBD5E1';
+          ctx.font = '600 30px Inter, sans-serif';
+          ctx.fillText(slide.subtitle, 70, 405);
+
+          // Cards
+          let yPos = 470;
+          slide.cards.forEach((c) => {
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+            ctx.fillRect(70, yPos, 940, 265);
+
+            ctx.fillStyle = c.color;
+            ctx.fillRect(70, yPos, 14, 265);
+
+            // Badge
+            ctx.fillStyle = c.color;
+            ctx.font = '800 28px JetBrains Mono, monospace';
+            ctx.fillText(c.badge, 115, yPos + 65);
+
+            // Card Title
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = '800 38px Inter, sans-serif';
+            ctx.fillText(c.title, 115, yPos + 135);
+
+            // Card Desc
+            ctx.fillStyle = '#CBD5E1';
+            ctx.font = '500 30px Inter, sans-serif';
+            ctx.fillText(c.desc, 115, yPos + 200);
+
+            yPos += 305;
+          });
+
+          // Footer
+          ctx.fillStyle = 'rgba(255,255,255,0.15)';
+          ctx.fillRect(70, 1760, 940, 3);
+
+          ctx.fillStyle = '#FFFFFF';
+          ctx.font = '800 34px Inter, sans-serif';
+          ctx.fillText('@northreliability  ·  LEARN • IMPROVE • EXCEL', 70, 1830);
+
+          ctx.fillStyle = '#F5B700';
+          ctx.font = '900 36px JetBrains Mono, monospace';
+          ctx.fillText(slide.step, 910, 1830);
+
+          const link = document.createElement('a');
+          link.download = slide.filename;
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+        }, index * 350);
+      });
+
+      showToast('Downloading all 4 HD (1080×1920) PNG slides...');
+    }
+  </script>
+</body>
+</html>
