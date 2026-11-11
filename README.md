@@ -22,6 +22,7 @@ Idea → research → GATE 1 (script) → footage, slides, voice, video → GATE
 ```text
 northreliability-reel-agent/
 ├── SKILL.md                     # the agent skill: workflow, gates, build and publish steps
+├── requirements.txt             # Python packages for the scripts
 ├── brand-kit.md                 # fixed standards: palette, type, layout, voice, timing, caption
 ├── scripts/
 │   ├── build_reel.py            # builds the reel from a spec + voice clips (Pillow, numpy, ffmpeg)
@@ -35,7 +36,7 @@ northreliability-reel-agent/
 ## Build a reel yourself
 
 ```bash
-pip install pillow numpy scipy
+pip install -r requirements.txt
 # needs ffmpeg on PATH and the Inter fonts (https://github.com/rsms/inter)
 python3 scripts/build_reel.py examples/post-18-obsolete-asset-policy.json out --voice voice/ --fonts /path/to/inter/otf
 # no voice yet? check the layout with estimated timing:
