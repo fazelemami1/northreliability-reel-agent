@@ -30,7 +30,8 @@ Decided by Fazel Emami on Nov 11, 2026. Every reel uses these values. `scripts/b
 - Slide 1 carries the gold series pill. Every slide has the gold bar above the headline.
 - Footage slides: the text sits on a navy panel (88% opacity) at the top of the safe area, with a soft dark band behind it.
 - Text-only slides: navy background, content centred vertically in the safe area.
-- End card (last slide): the NR mark (gold gear, white arrow) and "Find it before it fails." Nothing else.
+- End card (last slide): the NR mark (gold gear, white arrow) and "Find it before it fails." Optional, per reel: "Follow North Reliability / and keep in touch." above the signature, also spoken (first used on post 09, Nov 11, 2026).
+- Proof reels (Field Notes): a result slide with the before → after number in Inter Black 230 px, before in white, after in gold, with a short label and one line under it.
 
 ## Voice
 

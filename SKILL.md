@@ -78,7 +78,7 @@ Check each script's MD5 against the brief's document register.
 - A slide can have 2 clips (for example machine running, then the part named in the voice-over). Set `cx` (0 to 1) to move the vertical crop onto the subject. Check a frame of the crop before the full build.
 
 ### Slides (step 3)
-Write the spec (see `examples/post-18-obsolete-asset-policy.json`). Slide kinds: `footage`, `text`, `rows` (red/amber/green rules), `cta` (comment keyword), `end`. Put a `\n` in a headline to force a clean line break. The script asserts that text stays inside the safe area.
+Write the spec (see `examples/post-18-obsolete-asset-policy.json`). Slide kinds: `footage`, `text`, `rows` (red/amber/green rules), `result` (proof slide: `label`, `before`, `after`, `body`, shown as a large before → after number), `cta` (comment keyword), `end` (add `"follow": true` for "Follow North Reliability / and keep in touch." above the signature; also say it in the end voice line). Put a `\n` in a headline to force a clean line break. The script asserts that text stays inside the safe area.
 
 ### Voice (step 4)
 One ElevenLabs call per slide, all with the brand kit settings, run in parallel with `COMPOSIO_MULTI_EXECUTE_TOOL`:
@@ -112,7 +112,7 @@ Report one line per step.
 
 6. **Google Drive.** Create `Post NN - YYYY-MM-DD - REEL - topic` in the current Sprint folder (`GOOGLEDRIVE_FIND_FOLDER`, `GOOGLEDRIVE_CREATE_FOLDER`). Write `<name>_caption.txt`. Upload:
    - cover and caption (under 5 MB): `upload_local_file`, then `GOOGLEDRIVE_UPLOAD_FILE` with the s3key;
-   - the MP4 (usually 10 to 20 MB): `upload_local_file`, follow the link to its direct URL (`urllib.request.urlopen(url).geturl()`), then `GOOGLEDRIVE_UPLOAD_FROM_URL`. Check the size in the reply matches the file;
+   - the MP4 (usually 10 to 20 MB): `upload_local_file`, follow the link to its direct URL (`requests.head(url, allow_redirects=True, timeout=30).url`; urllib can fail the certificate check), then `GOOGLEDRIVE_UPLOAD_FROM_URL`. Check the size in the reply matches the file;
    - a file made in the local session (for example a PDF): the Google Drive connector's `create_file` with `base64Content` set to the file reference `sha256:<hash>:<absolute path>`.
    Share a lead magnet with `GOOGLEDRIVE_CREATE_PERMISSION` (type anyone, role reader).
 7. **Approval board.** Upload the cover and MP4 as board assets (Artifact publish, `asset: true`). Write the post doc: num, format, series, domain, title, file_name, status "approved", approved_at, publish_at_utc (7:00 a.m. Toronto in UTC), caption, script (with voice settings and footage IDs), music, drive_folder_id, workbench_folder, slides (cover, then MP4), video, note, needs_from_fazel. If Fazel wants to post it himself, leave publish_at_utc empty and say so in the note.

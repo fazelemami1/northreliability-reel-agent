@@ -204,9 +204,34 @@ def full_text(s, path):
         for ln in body:
             draw_words(d, LEFT, y, ln, fb, BODY, s.get("body_hl", ())); y += int(BODY_PX * 1.38)
         assert y <= BOTTOM, "CTA runs below the safe area"
+    elif s["kind"] == "result":
+        # Proof slide: label, a large "before -> after" number, one short line.
+        fl, fn, fb = font("Bold", 40), font("Black", 230), font("Medium", BODY_PX)
+        before, after = s["before"], s["after"]; arrow = " → "
+        wb, wa, wr = d.textlength(before, font=fn), d.textlength(after, font=fn), d.textlength(arrow, font=fn)
+        assert wb + wa + wr <= width, "result numbers too wide for the safe area"
+        body = wrap_words(d, s.get("body", ""), fb, width) if s.get("body") else []
+        total = 44 + 52 + 20 + 250 + 20 + len(body) * int(BODY_PX * 1.38)
+        y = TOP + (BOTTOM - TOP - total) // 2
+        d.rectangle((LEFT, y, LEFT + 96, y + 10), fill=GOLD_BAR); y += 44
+        d.text((LEFT, y), s.get("label", ""), font=fl, fill=BODY); y += 52 + 20
+        x = LEFT
+        d.text((x, y), before, font=fn, fill=WHITE); x += wb
+        d.text((x, y), arrow, font=fn, fill=MUTED); x += wr
+        d.text((x, y), after, font=fn, fill=GOLD); y += 250 + 20
+        for ln in body:
+            draw_words(d, LEFT, y, ln, fb, BODY, s.get("body_hl", ())); y += int(BODY_PX * 1.38)
+        assert y <= BOTTOM, "result slide runs below the safe area"
     elif s["kind"] == "end":
-        m = mark(280); im.paste(m, ((W - 280) // 2, 520), m)
-        d.text((W // 2, 960), s.get("line", "Find it before it fails."), font=font("ExtraBoldItalic", 66), fill=GOLD, anchor="mm")
+        if s.get("follow"):
+            # End card with a follow line: mark, "Follow North Reliability / and keep in touch.", signature.
+            m = mark(240); im.paste(m, ((W - 240) // 2, 420), m)
+            d.text((W // 2, 760), s.get("follow_line", "Follow North Reliability"), font=font("ExtraBold", 58), fill=WHITE, anchor="mm")
+            d.text((W // 2, 836), s.get("follow_sub", "and keep in touch."), font=font("Medium", 44), fill=BODY, anchor="mm")
+            d.text((W // 2, 990), s.get("line", "Find it before it fails."), font=font("ExtraBoldItalic", 66), fill=GOLD, anchor="mm")
+        else:
+            m = mark(280); im.paste(m, ((W - 280) // 2, 520), m)
+            d.text((W // 2, 960), s.get("line", "Find it before it fails."), font=font("ExtraBoldItalic", 66), fill=GOLD, anchor="mm")
     else:
         h = measure(s, width); y = TOP + (BOTTOM - TOP - h) // 2
         text_block(d, LEFT, y, s, width)
